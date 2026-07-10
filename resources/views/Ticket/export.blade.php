@@ -3,7 +3,7 @@
         <div class="grid md:grid-cols-2">
             <div>
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                    All Tickets
+                    Export Tickets
                 </h2>
             </div>
         </div>
@@ -44,23 +44,23 @@
                 }
             </style>
 
-            <div class="bg-white rounded-lg shadow-sm border border-gray-100 mb-6 ">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-100 mb-6 mt-4">
                 <div class="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
                     <h3 class="flex items-center gap-2 text-sm font-semibold text-gray-700">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 01.8 1.6l-4.8 6.4V17a1 1 0 01-1.447.894l-2-1A1 1 0 018 16v-6l-4.8-6.4A1 1 0 013 3z" clip-rule="evenodd" />
                         </svg>
-                        Filter Tickets
+                        Filter
                     </h3>
                     <span class="text-xs text-gray-400">
-                        {{ number_format($tickets->total()) }} {{ Str::plural('result', $tickets->total()) }}
+                        {{ number_format($matchCount) }} {{ Str::plural('ticket', $matchCount) }} will be exported
                         @if ($activeFilterCount > 0)
                             &middot; {{ $activeFilterCount }} {{ Str::plural('filter', $activeFilterCount) }} applied
                         @endif
                     </span>
                 </div>
 
-                <form method="GET" action="{{ route('ShowAllSubmissions') }}" class="p-5">
+                <form method="GET" action="{{ route('ShowExportPage') }}" class="p-5">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                         <div class="md:col-span-2">
                             <label for="search" class="{{ $labelClasses }}">Search</label>
@@ -129,7 +129,7 @@
 
                     <div class="flex items-center justify-end gap-4 mt-5 pt-4 border-t border-gray-100">
                         @if ($activeFilterCount > 0)
-                            <a href="{{ route('ShowAllSubmissions') }}"
+                            <a href="{{ route('ShowExportPage') }}"
                                 class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition ease-in-out duration-150">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
                                     <path fill-rule="evenodd" d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" clip-rule="evenodd" />
@@ -137,57 +137,18 @@
                                 Reset filters
                             </a>
                         @endif
-                        <x-button>
-                            Apply Filters
-                        </x-button>
+
+                        <button type="submit"
+                            class="text-sm text-gray-600 hover:text-gray-900 font-medium transition ease-in-out duration-150">
+                            Update preview
+                        </button>
+
+                        <a href="{{ route('DownloadTicketsExport', $filters) }}"
+                            class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 active:bg-gray-900 focus:outline-none focus:border-gray-900 focus:ring ring-gray-300 transition ease-in-out duration-150">
+                            Download Excel (.xlsx)
+                        </a>
                     </div>
                 </form>
-            </div>
-
-            <div class="flex flex-col gap-y-1.5">
-                @forelse ($tickets as $item)
-                    <a href="{{ route('ShowDetail', ['ticketId' => $item->id]) }}">
-                        <div class="grid md:grid-cols-4 bg-white rounded p-4 shadow hover:shadow-md hover:bg-gray-200">
-                            <div>
-                                <strong>Observation</strong>
-                                <div class="text-lg">#{{ $item->id }}</div>
-                                <strong>Ticket ID</strong>
-                                <div class="text-lg">#{{ $item->ticket_id }}</div>
-                            </div>
-                            <div>
-                                <div><strong>Reported by</strong></div>
-                                <div>{{ $item->name }}</div>
-                                <div>{{ $item->email }}</div>
-                                <div>{{ $item->phone_number }}</div>
-                            </div>
-                            <div>
-                                <div><strong>Department</strong></div>
-                                <div>{{ $item->department?->name ?? $item->department_other ?? 'No item' }}</div>
-                                <div><strong>Plant</strong></div>
-                                <div>{{ $item->plant?->name ?? 'No item' }}</div>
-                            </div>
-                            <div class="text-right">
-                                @if ($item->status == 'Closed')
-                                    <div class="inline-block bg-green-200 rounded-full py-1 px-3">
-                                        {{ $item->status }}</div>
-                                    <div style="text-align:right;">
-                                        <div class="datetime">On
-                                            {{ optional($item->approval->where('approver_level', 2)->first())->respond_at ? \Carbon\Carbon::parse($item->approval->where('approver_level', 2)->first()->respond_at)->format('d/m/Y, g:i A') : 'N/A' }}
-                                        </div>
-                                    </div>
-                                @else
-                                    <div class="inline-block bg-yellow-200 rounded-full py-1 px-3">
-                                        {{ $item->status }}</div>
-                                @endif
-                            </div>
-                        </div>
-                    </a>
-                @empty
-                    <div>No items</div>
-                @endforelse
-            </div>
-            <div>
-                {{ $tickets->links() }}
             </div>
         </div>
     </div>

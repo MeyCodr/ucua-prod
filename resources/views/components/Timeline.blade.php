@@ -1,6 +1,16 @@
 @php
     $level3Attachments = $ticket->attachment->where('level', 3);
     $hasLevel3Attachments = $level3Attachments->count() > 0;
+
+    // The level-1 approval's group_id is a static default (always "hodept"), not the
+    // specific people this ticket was actually routed to. Resolve the real PICs for
+    // this ticket instead of listing every member of that group.
+    $level1Pics = collect([
+        optional($ticket->dep_responsible)->head_department,
+        optional($ticket->sub_dep_responsible)->head_subdepartment,
+        optional($ticket->plant_involve)->head_plant,
+        optional(optional($ticket->dep_responsible)->division)->head_div,
+    ])->filter()->unique('id')->values();
 @endphp
 
 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
@@ -15,15 +25,20 @@
                                     <div class="row">
                                         <div class="col-md-12">
                                             @forelse ($ticket->approval->where('approver_level', $i) as $each)
+                                                @php
+                                                    $approverUsers = $i == 1 ? $level1Pics : $each->group->users;
+                                                @endphp
                                                 <div class="status-box">
                                                     <div class="lbl1">
                                                         {{ $each->group->name_display }}
                                                     </div>
                                                     <div>
                                                         <div style="font-weight:500;">
-                                                            @foreach ($each->group->users as $item)
+                                                            @forelse ($approverUsers as $item)
                                                                 {{ $item->name }}, {{ $item->email }} <br>
-                                                            @endforeach
+                                                            @empty
+                                                                <span class="text-gray-500">No head assigned</span>
+                                                            @endforelse
                                                         </div>
                                                     </div>
                                                     <hr style="margin:10px 0 10px 0;">

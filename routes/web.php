@@ -42,6 +42,9 @@ Route::prefix('Ticket')->group(function () {
 
         Route::get('/AllSubmissions', [TicketController::class, 'ShowAllSubmissions'])->name('ShowAllSubmissions');
         Route::get('/Detail/{ticketId}', [TicketController::class, 'ShowDetail'])->name('ShowDetail');
+
+        Route::get('/Export', [TicketController::class, 'ShowExportPage'])->name('ShowExportPage');
+        Route::get('/Export/Download', [TicketController::class, 'DownloadTicketsExport'])->name('DownloadTicketsExport');
     });
 });
 

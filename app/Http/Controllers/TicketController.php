@@ -32,6 +32,8 @@ use App\Models\ZeroHarmRule;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Session;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\TicketsExport;
 
 class TicketController extends Controller
 {
@@ -132,7 +134,9 @@ class TicketController extends Controller
             $ticket->gm_res_id = $validated['gm_res_id'];
             $ticket->ucua_id = $validated['entry_unsafe_condition_act'];
             $ticket->ucua_type = $validated['entry_unsafe'];
-            $ticket->ucua_other = ($validated['entry_unsafe'] == 0) ? $validated['unsafe_cond_other'] : null;
+            $ticket->ucua_other = ($validated['entry_unsafe'] == 0)
+                ? ($validated['entry_unsafe_condition_act'] === 'unsafe_act' ? $validated['unsafe_act_other'] : $validated['unsafe_cond_other'])
+                : null;
             $ticket->description = $validated['description'];
             $ticket->stop_cult_id = $validated['stop_cult_id'];
             $ticket->zero_harm_id = $validated['zero_harm_id'];
@@ -244,10 +248,10 @@ class TicketController extends Controller
         // Send emails
         Mail::to($users)
             ->cc('shephn@phn.com.my')
-            ->queue(new PendingApproval($ticket->id, $unsafeEntry->id, 1));
+            ->queue(new PendingApproval($ticket->id, $unsafeEntry->id ?? null, 1));
 
         Mail::to($ticket->email)
-            ->queue(new NewTicketInvoice($ticket->id, $unsafeEntry->id));
+            ->queue(new NewTicketInvoice($ticket->id, $unsafeEntry->id ?? null));
 
         return redirect()->route('ShowSuccessTicketSubmit');
     }
@@ -401,6 +405,7 @@ class TicketController extends Controller
             'sub_department',
             'dep_responsible',
             'dep_responsible.head_department',
+            'dep_responsible.division.head_div',
             'sub_dep_responsible',
             'sub_dep_responsible.head_subdepartment',
             'gm_responsible',
@@ -529,16 +534,18 @@ class TicketController extends Controller
                 ]);
             });
 
-            $ticket->status = "Declined";
-            $ticket->pending_at_level = null;
-            $ticket->save();
+            if ($approverRespond !== "Verify") {
+                $ticket->status = "Declined";
+                $ticket->pending_at_level = null;
+                $ticket->save();
 
-            $level_2 = Approval::where([
-                ['ticket_id', $ticket->id],
-                ['approver_level', 2]
-            ])->first();
-            $level_2->approver_status = "Declined";
-            $level_2->save();
+                $level_2 = Approval::where([
+                    ['ticket_id', $ticket->id],
+                    ['approver_level', 2]
+                ])->first();
+                $level_2->approver_status = "Declined";
+                $level_2->save();
+            }
         }
 
         $unsafeEntry = Unsafe::find($ticket->ucua_type);
@@ -569,13 +576,13 @@ class TicketController extends Controller
 
                 if ($notifyEmails->isNotEmpty()) {
                     Mail::to($notifyEmails->values()->all())
-                        ->queue(new PendingApproval($ticket->id, $unsafeEntry->id, 1));
+                        ->queue(new PendingApproval($ticket->id, $unsafeEntry->id ?? null, 1));
                 }
             } else {
-                Mail::to($ticket->email)->queue(new ApproverRespond($ticket->id, $unsafeEntry->id, $approval->id));
+                Mail::to($ticket->email)->queue(new ApproverRespond($ticket->id, $unsafeEntry->id ?? null, $approval->id));
             }
         } elseif ($approval->approver_level == 2) {
-            Mail::to($ticket->email)->queue(new ApproverRespond($ticket->id, $unsafeEntry->id, $approval->id));
+            Mail::to($ticket->email)->queue(new ApproverRespond($ticket->id, $unsafeEntry->id ?? null, $approval->id));
         }
 
         if ($approverRespond == "Verify") {
@@ -697,9 +704,13 @@ class TicketController extends Controller
         ]);
     }
 
-    public function ShowAllSubmissions()
+    /**
+     * Shared department/plant/status/date/search filtering used by both the
+     * All Submissions list and the ticket export, so the two stay in sync.
+     */
+    private function filteredTicketsQuery(Request $request)
     {
-        $ticket = Ticket::with([
+        return Ticket::with([
             'plant',
             'plant_involve',
             'department',
@@ -715,11 +726,64 @@ class TicketController extends Controller
             'site',
             'attachment',
             'approval'
-        ])->orderBy('created_at', 'desc')->paginate(10);
+        ])
+            ->when($request->filled('department_id'), function ($query) use ($request) {
+                $query->where('department_id', $request->department_id);
+            })
+            ->when($request->filled('site_id'), function ($query) use ($request) {
+                $query->where('site_id', $request->site_id);
+            })
+            ->when($request->filled('status'), function ($query) use ($request) {
+                $query->where('status', $request->status);
+            })
+            ->when($request->filled('date_from'), function ($query) use ($request) {
+                $query->whereDate('created_at', '>=', $request->date_from);
+            })
+            ->when($request->filled('date_to'), function ($query) use ($request) {
+                $query->whereDate('created_at', '<=', $request->date_to);
+            })
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $search = $request->search;
+                $query->where(function ($query) use ($search) {
+                    $query->where('ticket_id', 'like', "%{$search}%")
+                        ->orWhere('staff_id', 'like', "%{$search}%")
+                        ->orWhere('name', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('created_at', 'desc');
+    }
+
+    public function ShowAllSubmissions(Request $request)
+    {
+        $ticket = $this->filteredTicketsQuery($request)
+            ->paginate(10)
+            ->withQueryString();
 
         return view('Ticket.all_submissions', [
             'tickets' => $ticket,
+            'departments' => Department::orderBy('name', 'asc')->get(),
+            'plants' => Plant::orderBy('name', 'asc')->get(),
+            'filters' => $request->only(['department_id', 'site_id', 'status', 'date_from', 'date_to', 'search']),
         ]);
+    }
+
+    public function ShowExportPage(Request $request)
+    {
+        $filters = $request->only(['department_id', 'site_id', 'status', 'date_from', 'date_to', 'search']);
+
+        return view('Ticket.export', [
+            'departments' => Department::orderBy('name', 'asc')->get(),
+            'plants' => Plant::orderBy('name', 'asc')->get(),
+            'filters' => $filters,
+            'matchCount' => $this->filteredTicketsQuery($request)->count(),
+        ]);
+    }
+
+    public function DownloadTicketsExport(Request $request)
+    {
+        $tickets = $this->filteredTicketsQuery($request)->get();
+
+        return Excel::download(new TicketsExport($tickets), 'tickets-' . now()->format('Y-m-d_His') . '.xlsx');
     }
 
     public function ShowDetail(Request $request, $ticket_id)
@@ -727,10 +791,12 @@ class TicketController extends Controller
         $ticket = Ticket::with([
             'plant',
             'plant_involve',
+            'plant_involve.head_plant',
             'department',
             'sub_department',
             'dep_responsible',
             'dep_responsible.head_department',
+            'dep_responsible.division.head_div',
             'sub_dep_responsible',
             'sub_dep_responsible.head_subdepartment',
             'gm_responsible',

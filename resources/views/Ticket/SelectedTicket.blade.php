@@ -108,7 +108,7 @@
                                     <div>
                                         <div class="text-gray-600">Reported on</div>
                                         <div>
-                                            {{ \Carbon\Carbon::parse($ticket->ticket_created_at)->format('d/m/Y, g:i A') }}
+                                            {{ \Carbon\Carbon::parse($ticket->created_at)->format('d/m/Y, g:i A') }}
                                         </div>
                                     </div>
                                 </div>

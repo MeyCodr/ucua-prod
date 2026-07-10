@@ -95,7 +95,7 @@
                                     <div>
                                         <div class="text-gray-600">Reported on</div>
                                         <div>
-                                            {{ \Carbon\Carbon::parse($ticket->ticket_created_at)->format('d/m/Y, g:i A') }}
+                                            {{ \Carbon\Carbon::parse($ticket->created_at)->format('d/m/Y, g:i A') }}
                                         </div>
                                     </div>
                                 </div>
@@ -121,8 +121,8 @@
                                         <ul class="list-disc">
                                             @if ($ticket->plant_involve)
                                                 <li>
-                                                    <div>{{ $ticket->plant_involve->head_plant->name }}</div>
-                                                    <div>{{ $ticket->plant_involve->head_plant->email }}</div>
+                                                    <div>{{ $ticket->plant_involve->head_plant != null ? $ticket->plant_involve->head_plant->name : 'No item' }}</div>
+                                                    <div>{{ $ticket->plant_involve->head_plant != null ? $ticket->plant_involve->head_plant->email : 'No item' }}</div>
                                                 </li>
                                             @else
                                                 <div>No item</div>

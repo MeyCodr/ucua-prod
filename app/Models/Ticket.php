@@ -15,13 +15,13 @@ class Ticket extends Model
     protected $table = "entry_tickets";
 
     /**
-     * Get the plant that owns the Ticket
+     * Get the reporting site that owns the Ticket
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function plant()
     {
-        return $this->belongsTo(Plant::class, 'site_id');
+        return $this->belongsTo(Site::class, 'site_id');
     }
 
     /**

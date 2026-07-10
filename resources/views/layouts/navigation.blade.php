@@ -36,6 +36,10 @@
                         <x-nav-link :href="route('User.index')" :active="request()->routeIs('User.index')">
                             Users
                         </x-nav-link>
+
+                        <x-nav-link :href="route('ShowExportPage')" :active="request()->routeIs('ShowExportPage')">
+                            Export
+                        </x-nav-link>
                     @endif
 
                 </div>
