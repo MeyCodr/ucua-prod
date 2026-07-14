@@ -37,7 +37,7 @@
         @csrf
         <div class="col-sm-12 col-md-9 mx-auto">
             <div class="flex justify-end mb-2">
-                <a href="/" class="btn btn-primary">Home</a>
+                <a href="{{ url('/') }}" class="btn btn-primary">Home</a>
             </div>
             {{-- Section 1 Contact Detail --}}
             <div class="mb-2">

@@ -14,7 +14,7 @@
 
     <x-auth-card>
         <x-slot name="logo">
-            <a href="/">
+            <a href="{{ url('/') }}">
                 <x-application-logo class="w-23 h-9 fill-current text-gray-500" />
             </a>
         </x-slot>

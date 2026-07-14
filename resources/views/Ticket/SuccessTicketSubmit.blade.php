@@ -15,7 +15,7 @@
             </div>
             <div>
                 <a class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded inline-block mt-4"
-                    href="/">Home</a>
+                    href="{{ url('/') }}">Home</a>
                 <a class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-3 rounded inline-block mt-4"
                     href="{{ route('ShowNewTicketForm') }}">New UCUA Observation</a>
             </div>
