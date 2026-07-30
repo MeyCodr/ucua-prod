@@ -767,6 +767,48 @@
                             @error('bbs_action')
                                 <div class="alert alert-danger">{{ $message }}</div>
                             @enderror
+                            <div id="bbs_methodology_section" class="form-group mt-2" style="display: none;">
+                                <label class="font-semibold">Please select which 6C methodology you apply? You can choose more than one
+                                    <span class="text-red-600 bbs_methodology_required">*</span><br>
+                                    <small><i>Metodologi 6C (pilih semua yang berkaitan)</i></small></label>
+                                @foreach (['Capture', 'Care', 'Connect', 'Correct', 'Conversation', 'Conclude'] as $methodology)
+                                    <div class="form-check">
+                                        <label class="form-check-label">
+                                            <input type="checkbox" class="form-check-input bbs_methodology_checkbox"
+                                                name="bbs_methodology[]" value="{{ $methodology }}"
+                                                {{ is_array(old('bbs_methodology')) && in_array($methodology, old('bbs_methodology')) ? 'checked' : '' }}>&nbsp;{{ $methodology }}
+                                        </label>
+                                    </div>
+                                @endforeach
+                                @error('bbs_methodology')
+                                    <div class="alert alert-danger">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <script>
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    const bbsRadios = document.getElementsByName('bbs_action');
+                                    const bbsMethodologySection = document.getElementById('bbs_methodology_section');
+                                    const bbsMethodologyCheckboxes = document.querySelectorAll('.bbs_methodology_checkbox');
+
+                                    function toggleBbsMethodology() {
+                                        const checked = document.querySelector('input[name="bbs_action"]:checked');
+                                        if (checked && checked.value === '1') {
+                                            bbsMethodologySection.style.display = 'block';
+                                        } else {
+                                            bbsMethodologySection.style.display = 'none';
+                                            bbsMethodologyCheckboxes.forEach(function(checkbox) {
+                                                checkbox.checked = false;
+                                            });
+                                        }
+                                    }
+
+                                    bbsRadios.forEach(function(radio) {
+                                        radio.addEventListener('change', toggleBbsMethodology);
+                                    });
+
+                                    toggleBbsMethodology();
+                                });
+                            </script>
                         </div>
                         <div class="text-gray-500 italic text-sm mt-2 mb-0">Please state if there is any action
                             taken

@@ -51,6 +51,8 @@ class SubmitNewTicket extends FormRequest
             'attachment_correction.*' => 'image|max:50000',
             'action_taken' => 'required|max:500',
             'bbs_action' => 'required',
+            'bbs_methodology' => ['required_if:bbs_action,1', 'nullable', 'array'],
+            'bbs_methodology.*' => ['in:Capture,Care,Connect,Correct,Conversation,Conclude'],
         ];
     }
 }

@@ -179,6 +179,19 @@
 
                                 <div class="grid md:grid-cols-2">
                                     <div>
+                                        <div class="text-gray-600">BBS Action</div>
+                                        <div>{{ $ticket->bbs_action == 1 ? 'Yes' : 'No' }}</div>
+                                    </div>
+                                    @if ($ticket->bbs_action == 1)
+                                        <div>
+                                            <div class="text-gray-600">6C Methodology</div>
+                                            <div>{{ $ticket->bbs_methodology }}</div>
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <div class="grid md:grid-cols-2">
+                                    <div>
                                         @if ($ticket->ucua_id == 'unsafe_condition')
                                             <div class="text-gray-600">Unsafe Conditions:</div>
                                         @elseif ($ticket->ucua_id == 'unsafe_act')

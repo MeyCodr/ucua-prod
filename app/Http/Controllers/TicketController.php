@@ -143,6 +143,7 @@ class TicketController extends Controller
             $ticket->rank_id = $validated['rank_id'];
             $ticket->action_taken = $validated['action_taken'];
             $ticket->bbs_action = $validated['bbs_action'];
+            $ticket->bbs_methodology = isset($validated['bbs_methodology']) ? implode(', ', $validated['bbs_methodology']) : null;
             $ticket->status = 'Open';
             $ticket->pending_at_level = 1;
             $ticket->dateline = Carbon::now()->addWeeks(2)->toDateTimeString();
