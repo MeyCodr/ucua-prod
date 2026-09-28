@@ -30,9 +30,28 @@
     <div class="min-h-screen bg-gray-100">
         @include('layouts.navigation')
 
+        {{--
+            The compiled public/css/app.css on this install predates this markup and can't
+            currently be rebuilt (Laravel Mix's toolchain doesn't run on this machine), so a
+            couple of Tailwind utilities below were never generated. This rule backfills it
+            with its standard Tailwind value.
+        --}}
+        <style>
+            .py-8 { padding-top: 2rem; padding-bottom: 2rem; }
+
+            /* Phones: page headers put a title and a (non-shrinking) button group on one row;
+               let the buttons drop underneath instead of pushing past the screen edge. */
+            @media (max-width: 640px) {
+                header .justify-between { flex-wrap: wrap; row-gap: 12px; }
+                header h2 { word-break: break-word; }
+                /* Page bodies only pad from `sm:` up, which leaves cards touching the screen edge. */
+                main .max-w-7xl.mx-auto { padding-left: 16px; padding-right: 16px; }
+            }
+        </style>
+
         <!-- Page Heading -->
-        <header class="bg-white shadow">
-            <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <header>
+            <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
                 {{ $header }}
             </div>
         </header>

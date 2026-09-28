@@ -34,6 +34,9 @@ Route::prefix('Ticket')->group(function () {
     Route::get('Search', [TicketController::class, 'SearchTicketForm'])->name('ShowSearchTicketForm');
     Route::get('Search/Result/{status}', [TicketController::class, 'ShowTicketByStaffId'])->name('SearchTicketResult');
     Route::get('Search/Result/{status}/{ticket_id}', [TicketController::class, 'ShowTicketDetail'])->name('SearchTicketDetail');
+    Route::post('Search/Result/{status}/{ticket_id}/Correction', [TicketController::class, 'UploadCorrection'])
+        ->middleware('throttle:10,1')
+        ->name('SubmitCorrectionPhoto');
 
     Route::middleware(['auth'])->group(function () {
         Route::get('List/{category}', [TicketController::class, 'ShowListTickets'])->name('ShowListTickets');
@@ -42,6 +45,7 @@ Route::prefix('Ticket')->group(function () {
 
         Route::get('/AllSubmissions', [TicketController::class, 'ShowAllSubmissions'])->name('ShowAllSubmissions');
         Route::get('/Detail/{ticketId}', [TicketController::class, 'ShowDetail'])->name('ShowDetail');
+        Route::post('/Assign/{ticketId}', [TicketController::class, 'AssignApprover'])->name('AssignApprover');
 
         Route::get('/Export', [TicketController::class, 'ShowExportPage'])->name('ShowExportPage');
         Route::get('/Export/Download', [TicketController::class, 'DownloadTicketsExport'])->name('DownloadTicketsExport');

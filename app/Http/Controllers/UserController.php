@@ -20,7 +20,18 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
-        $user = User::orderBy('id', 'asc');
+        $sortable = [
+            'id' => 'id',
+            'name' => 'name',
+            'email' => 'email',
+            'created_at' => 'created_at',
+        ];
+
+        $sortField = $request->input('sort', 'id');
+        $sortField = array_key_exists($sortField, $sortable) ? $sortField : 'id';
+        $sortDirection = $request->input('direction') === 'desc' ? 'desc' : 'asc';
+
+        $user = User::query();
 
         if ($request->filled('name')) {
             $user->where('name', 'LIKE', "%{$request->name}%");
@@ -29,9 +40,16 @@ class UserController extends Controller
             $user->where('email', 'LIKE', "%{$request->email}%");
         }
 
-        $users = $user->paginate(10);
+        $users = $user->orderBy($sortable[$sortField], $sortDirection)
+            ->paginate(20);
 
-        return view('user.list', ['users' => $users, 'pageTitle' => 'Users', 'pageNum' => $users->currentPage()]);
+        return view('user.list', [
+            'users' => $users,
+            'pageTitle' => 'Users',
+            'pageNum' => $users->currentPage(),
+            'sortField' => $sortField,
+            'sortDirection' => $sortDirection,
+        ]);
     }
 
     /**

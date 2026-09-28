@@ -30,6 +30,7 @@ use App\Models\SubDepartment;
 use App\Models\User;
 use App\Models\ZeroHarmRule;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Session;
 use Maatwebsite\Excel\Facades\Excel;
@@ -39,26 +40,18 @@ class TicketController extends Controller
 {
     public function ShowTicketForm()
     {
-        $site = Site::orderBy('name', 'asc')->get();
         $department = Department::with('subdepartment')->orderBy('name', 'asc')->get();
         $plant = Plant::orderBy('name', 'asc')->get();
-        $hodUsers = Division::with('head_div')->get();
         $condition = Unsafe::where('is_enabled', 1)->where('is_condition', 1)->orderBy('name', 'asc')->get();
         $act = Unsafe::where('is_enabled', 1)->where('is_act', 1)->orderBy('name', 'asc')->get();
         $stop_cult = StopCulture::all();
-        $zero_harm = ZeroHarmRule::all();
-        $rank = Rank::all();
 
         return view('Ticket.NewTicketForm', [
-            'sites' => $site,
             'departments' => $department,
             'plants' => $plant,
-            'hods' => $hodUsers,
             'conditions' => $condition,
             'acts' => $act,
             'stop_cults' => $stop_cult,
-            'zero_harms' => $zero_harm,
-            'ranks' => $rank,
         ]);
     }
 
@@ -85,7 +78,6 @@ class TicketController extends Controller
             $ticket->email = $validated['email'];
             $ticket->phone_number = $validated['phone_number'];
             $ticket->staff_id = $validated['staff_id'];
-            $ticket->site_id = $validated['site_id'];
             $selectedDepartment = $validated['department_id'];
             
             if ($selectedDepartment === '0') {
@@ -131,7 +123,6 @@ class TicketController extends Controller
                 $ticket->dept_res_other = null;
             }
             $ticket->plant_inv_id = $validated['plant_inv_id'];
-            $ticket->gm_res_id = $validated['gm_res_id'];
             $ticket->ucua_id = $validated['entry_unsafe_condition_act'];
             $ticket->ucua_type = $validated['entry_unsafe'];
             $ticket->ucua_other = ($validated['entry_unsafe'] == 0)
@@ -139,8 +130,6 @@ class TicketController extends Controller
                 : null;
             $ticket->description = $validated['description'];
             $ticket->stop_cult_id = $validated['stop_cult_id'];
-            $ticket->zero_harm_id = $validated['zero_harm_id'];
-            $ticket->rank_id = $validated['rank_id'];
             $ticket->action_taken = $validated['action_taken'];
             $ticket->bbs_action = $validated['bbs_action'];
             $ticket->bbs_methodology = isset($validated['bbs_methodology']) ? implode(', ', $validated['bbs_methodology']) : null;
@@ -153,6 +142,7 @@ class TicketController extends Controller
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Failed to create ticket: ' . $e->getMessage(), ['exception' => $e]);
             return back()->withErrors(['error' => 'Failed to create ticket. Please try again.']);
         }
 
@@ -301,7 +291,7 @@ class TicketController extends Controller
 
         if ($request->category == 'Pending') {
             if ($user_role->contains(function ($role) {
-                return in_array($role, ['hodiv', 'hodept', 'hop', 'hos']);
+                return in_array($role, ['hodiv', 'hodept', 'hosubdept', 'hop', 'hos']);
             })) {
                 $approval = Approval::where([
                     ['approver_level', 1],
@@ -325,7 +315,7 @@ class TicketController extends Controller
             }
         } elseif ($request->category == 'Verified' || $request->category == 'Completed') {
             if ($user_role->contains(function ($role) {
-                return in_array($role, ['hodiv', 'hodept', 'hop', 'hos']);
+                return in_array($role, ['hodiv', 'hodept', 'hosubdept', 'hop', 'hos']);
             })) {
                 $approval = Approval::where([
                     ['approver_level', 1],
@@ -349,7 +339,7 @@ class TicketController extends Controller
             }
         } elseif ($request->category == 'Declined') {
             if ($user_role->contains(function ($role) {
-                return in_array($role, ['hodiv', 'hodept', 'hop', 'hos']);
+                return in_array($role, ['hodiv', 'hodept', 'hosubdept', 'hop', 'hos']);
             })) {
                 $approval = Approval::where([
                     ['approver_level', 1],
@@ -373,7 +363,19 @@ class TicketController extends Controller
             }
         }
 
-        $tickets = Ticket::with([
+        $sortable = [
+            'id' => 'entry_tickets.id',
+            'ticket_id' => 'entry_tickets.ticket_id',
+            'name' => 'entry_tickets.name',
+            'department' => 'departments.name',
+            'plant' => 'plants.name',
+        ];
+
+        $sortField = $request->input('sort', 'id');
+        $sortField = array_key_exists($sortField, $sortable) ? $sortField : 'id';
+        $sortDirection = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+
+        $ticketsQuery = Ticket::with([
             'plant',
             'plant_involve',
             'plant_involve.head_plant',
@@ -389,11 +391,23 @@ class TicketController extends Controller
             'rank',
             'site',
             'approval'
-        ])->whereIn('id', $approval)->orderBy('created_at', 'desc')->paginate(10);
+        ])->whereIn('entry_tickets.id', $approval);
+
+        if ($sortField === 'department') {
+            $ticketsQuery->select('entry_tickets.*')
+                ->leftJoin('departments', 'departments.id', '=', 'entry_tickets.department_id');
+        } elseif ($sortField === 'plant') {
+            $ticketsQuery->select('entry_tickets.*')
+                ->leftJoin('plants', 'plants.id', '=', 'entry_tickets.plant_inv_id');
+        }
+
+        $tickets = $ticketsQuery->orderBy($sortable[$sortField], $sortDirection)
+            ->paginate(20)
+            ->withQueryString();
 
         $category = $request->category;
 
-        return view('Ticket.ListTickets', compact('tickets', 'tabs', 'category'));
+        return view('Ticket.ListTickets', compact('tickets', 'tabs', 'category', 'sortField', 'sortDirection'));
     }
 
     public function ShowSelectedTicket(Request $request)
@@ -436,6 +450,30 @@ class TicketController extends Controller
             $approveButtonText = null;
         }
 
+        // If an admin assigned this level-1 ticket to specific people, only they (or an admin)
+        // get the Verify/Decline buttons; everyone else just sees who it is assigned to.
+        $assignedNotice = null;
+        $level1Approval = Approval::with('assignees')
+            ->where([['ticket_id', $ticket->id], ['approver_level', 1]])
+            ->first();
+        if ($request->category == 'Pending'
+            && $approvalStatues->approver_level == 1
+            && $level1Approval && $level1Approval->assignees->isNotEmpty()) {
+            $assignees = $level1Approval->assignees;
+            $isAssignee = $assignees->contains('id', Auth::id());
+            if ($isAssignee) {
+                $others = $assignees->count() - 1;
+                $assignedNotice = 'Assigned to you' . ($others > 0 ? ' and ' . $others . ' other' . ($others > 1 ? 's' : '') : '');
+            } else {
+                $assignedNotice = 'Assigned to ' . $assignees->sortBy('name')->pluck('name')->implode(', ');
+            }
+
+            if (!$isAssignee && !$this->isAdminUser()) {
+                $isShowButton = false;
+                $approveButtonText = null;
+            }
+        }
+
         $mode = $request->mode;
         $category = $request->category;
 
@@ -446,6 +484,7 @@ class TicketController extends Controller
             'mode',
             'category',
             'approveButtonText',
+            'assignedNotice',
         ));
     }
 
@@ -466,6 +505,15 @@ class TicketController extends Controller
         if (!$approval) {
             return redirect()->route('ShowSelectedTicket', ['category' => 'Pending', 'ticketId' => $ticket->id])
                 ->withErrors(['error' => 'Approval flow record not found.']);
+        }
+
+        // A level-1 ticket an admin assigned to specific people can only be answered by them or an admin.
+        if ($approval->approver_level == 1 && !$this->isAdminUser()) {
+            $assigneeIds = $approval->assignees()->pluck('users.id');
+            if ($assigneeIds->isNotEmpty() && !$assigneeIds->contains(Auth::id())) {
+                return redirect()->route('ShowSelectedTicket', ['category' => 'Pending', 'ticketId' => $ticket->id])
+                    ->withErrors(['error' => 'This ticket has been assigned to other approvers.']);
+            }
         }
 
         if (isset($approval)) {
@@ -646,24 +694,52 @@ class TicketController extends Controller
             'zero_harm',
             'rank',
             'site'
-        ])->where('staff_id', $staff_id);
+        ])->where('entry_tickets.staff_id', $staff_id);
 
         if ($request->status == 'Open') {
-            $query->where('status', 'Open');
+            $query->where('entry_tickets.status', 'Open');
         } elseif ($request->status == 'Closed') {
-            $query->where('status', 'Closed');
+            $query->where('entry_tickets.status', 'Closed');
         } elseif ($request->status == 'Declined') {
-            $query->where('status', 'Declined');
+            $query->where('entry_tickets.status', 'Declined');
         } else {
             return redirect()->route('ShowSearchTicketForm')->withErrors(['status' => 'Invalid status selected.']);
         }
 
-        $tickets = $query->orderBy('created_at', 'desc')->paginate(10)->appends(['staff_id' => $staff_id]);
+        // Sortable column headers. Newest first by default.
+        $sortable = [
+            'id' => 'entry_tickets.id',
+            'ticket_id' => 'entry_tickets.ticket_id',
+            'name' => 'entry_tickets.name',
+            'department' => 'departments.name',
+            'plant' => 'plants.name',
+            'created_at' => 'entry_tickets.created_at',
+            'dateline' => 'entry_tickets.dateline',
+        ];
 
+        $sortField = $request->input('sort', 'created_at');
+        $sortField = array_key_exists($sortField, $sortable) ? $sortField : 'created_at';
+        $sortDirection = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+
+        if ($sortField === 'department') {
+            $query->select('entry_tickets.*')
+                ->leftJoin('departments', 'departments.id', '=', 'entry_tickets.department_id');
+        } elseif ($sortField === 'plant') {
+            $query->select('entry_tickets.*')
+                ->leftJoin('plants', 'plants.id', '=', 'entry_tickets.plant_inv_id');
+        }
+
+        $tickets = $query->orderBy($sortable[$sortField], $sortDirection)
+            ->orderBy('entry_tickets.id', 'desc')
+            ->paginate(10)
+            ->appends(['staff_id' => $staff_id, 'sort' => $sortField, 'direction' => $sortDirection]);
+
+        // Available points: earned, minus redemptions already approved, minus requests still
+        // waiting for approval. Same calculation as the Redeem page (PointRedeemController).
         $point_sum = PointHistory::where([['staff_id', $staff_id], ['action', 'New']])->sum('points');
-        $point_minus = PointHistory::where([['staff_id', $staff_id], ['action', 'Redeem']])->sum('points');
-        //check null
-        $point = isset($point_sum) || isset($point_minus) ? $point_sum ?? 0 - $point_minus : 0;
+        $point_pending = PointHistory::where([['staff_id', $staff_id], ['action', 'Redeem'], ['approver_id', null], ['respond_at', null]])->sum('points');
+        $point_redeemed = PointHistory::where([['staff_id', $staff_id], ['action', 'Redeem'], ['approver_id', '!=', null], ['respond_at', '!=', null]])->sum('points');
+        $point = $point_sum - $point_pending - $point_redeemed;
 
         return view('submitter.submission_list', [
             'tickets' => $tickets,
@@ -671,6 +747,8 @@ class TicketController extends Controller
             'tabs' => $tabs,
             'status' => $request->status,
             'point' => $point,
+            'sortField' => $sortField,
+            'sortDirection' => $sortDirection,
         ]);
     }
 
@@ -705,6 +783,66 @@ class TicketController extends Controller
         ]);
     }
 
+    /** Most corrective-action ("after") photos a ticket can hold; same limit as the submit form. */
+    private const MAX_CORRECTION_PHOTOS = 5;
+
+    /**
+     * Submitter action: add corrective-action ("after") pictures to their own ticket.
+     *
+     * The submitter pages are reached with just a Staff ID and no login, so this is deliberately
+     * narrow: Open tickets only, PNG/JPEG/GIF only (no SVG), and a cap on photos per ticket.
+     */
+    public function UploadCorrection(Request $request, $status, $ticket_id)
+    {
+        $ticket = Ticket::find($ticket_id);
+        if (!$ticket) {
+            return redirect()->route('ShowSearchTicketForm')->withErrors(['ticket_id' => 'Ticket not found.']);
+        }
+
+        $back = redirect()->route('SearchTicketDetail', ['status' => $ticket->status, 'ticket_id' => $ticket->id]);
+
+        if ($ticket->status !== 'Open') {
+            Alert::alert('Pictures can only be added while the ticket is still open.', 'bg-red-200');
+            return $back;
+        }
+
+        $remaining = self::MAX_CORRECTION_PHOTOS
+            - TicketAttachment::where([['ticket_id', $ticket->id], ['level', 2]])->count();
+        if ($remaining <= 0) {
+            Alert::alert('This ticket already has the maximum of ' . self::MAX_CORRECTION_PHOTOS . ' corrective action photos.', 'bg-red-200');
+            return $back;
+        }
+
+        $request->validate([
+            'attachment_correction' => ['required', 'array', 'max:' . $remaining],
+            'attachment_correction.*' => ['file', 'mimes:jpeg,jpg,png,gif', 'max:50000'],
+        ], [
+            'attachment_correction.required' => 'Please choose at least one picture.',
+            'attachment_correction.max' => 'You can add ' . $remaining . ' more photo' . ($remaining == 1 ? '' : 's') . ' to this ticket.',
+            'attachment_correction.*.mimes' => 'Only PNG, JPEG & GIF pictures are supported. If your phone saves photos as HEIC, set the camera format to "Most Compatible" (iPhone) or JPEG and try again.',
+            'attachment_correction.*.max' => 'Each picture must be smaller than 50MB.',
+        ]);
+
+        collect($request->file('attachment_correction'))->each(function ($file) use ($ticket) {
+            $fileName = Str::random(40) . '.' . $file->extension();
+            $filePath = 'ticket/ticket_' . $ticket->id . '/2/' . $fileName;
+
+            $newAttach = new TicketAttachment;
+            $newAttach->ticket_id = $ticket->id;
+            $newAttach->file_name = $file->getClientOriginalName();
+            $newAttach->level = 2;
+            $newAttach->file_rand_name = $fileName;
+            $newAttach->file_path = $filePath;
+            $newAttach->save();
+
+            Storage::disk('public')->putFileAs('ticket/ticket_' . $ticket->id . '/2/', $file, $fileName);
+        });
+
+        Alert::alert('Picture(s) uploaded.', 'bg-green-200');
+
+        return $back;
+    }
+
     /**
      * Shared department/plant/status/date/search filtering used by both the
      * All Submissions list and the ticket export, so the two stay in sync.
@@ -729,34 +867,57 @@ class TicketController extends Controller
             'approval'
         ])
             ->when($request->filled('department_id'), function ($query) use ($request) {
-                $query->where('department_id', $request->department_id);
+                $query->where('entry_tickets.department_id', $request->department_id);
             })
-            ->when($request->filled('site_id'), function ($query) use ($request) {
-                $query->where('site_id', $request->site_id);
+            ->when($request->filled('plant_id'), function ($query) use ($request) {
+                $query->where('entry_tickets.plant_inv_id', $request->plant_id);
             })
             ->when($request->filled('status'), function ($query) use ($request) {
-                $query->where('status', $request->status);
+                $query->where('entry_tickets.status', $request->status);
             })
             ->when($request->filled('date_from'), function ($query) use ($request) {
-                $query->whereDate('created_at', '>=', $request->date_from);
+                $query->whereDate('entry_tickets.created_at', '>=', $request->date_from);
             })
             ->when($request->filled('date_to'), function ($query) use ($request) {
-                $query->whereDate('created_at', '<=', $request->date_to);
+                $query->whereDate('entry_tickets.created_at', '<=', $request->date_to);
             })
             ->when($request->filled('search'), function ($query) use ($request) {
                 $search = $request->search;
                 $query->where(function ($query) use ($search) {
-                    $query->where('ticket_id', 'like', "%{$search}%")
-                        ->orWhere('staff_id', 'like', "%{$search}%")
-                        ->orWhere('name', 'like', "%{$search}%");
+                    $query->where('entry_tickets.ticket_id', 'like', "%{$search}%")
+                        ->orWhere('entry_tickets.staff_id', 'like', "%{$search}%")
+                        ->orWhere('entry_tickets.name', 'like', "%{$search}%");
                 });
             })
-            ->orderBy('created_at', 'desc');
+            ->orderBy('entry_tickets.created_at', 'desc');
     }
 
     public function ShowAllSubmissions(Request $request)
     {
-        $ticket = $this->filteredTicketsQuery($request)
+        $sortable = [
+            'id' => 'entry_tickets.id',
+            'ticket_id' => 'entry_tickets.ticket_id',
+            'name' => 'entry_tickets.name',
+            'department' => 'departments.name',
+            'plant' => 'plants.name',
+            'status' => 'entry_tickets.status',
+        ];
+
+        $sortField = $request->input('sort', 'id');
+        $sortField = array_key_exists($sortField, $sortable) ? $sortField : 'id';
+        $sortDirection = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+
+        $query = $this->filteredTicketsQuery($request);
+
+        if ($sortField === 'department') {
+            $query->select('entry_tickets.*')
+                ->leftJoin('departments', 'departments.id', '=', 'entry_tickets.department_id');
+        } elseif ($sortField === 'plant') {
+            $query->select('entry_tickets.*')
+                ->leftJoin('plants', 'plants.id', '=', 'entry_tickets.plant_inv_id');
+        }
+
+        $ticket = $query->reorder($sortable[$sortField], $sortDirection)
             ->paginate(10)
             ->withQueryString();
 
@@ -764,13 +925,15 @@ class TicketController extends Controller
             'tickets' => $ticket,
             'departments' => Department::orderBy('name', 'asc')->get(),
             'plants' => Plant::orderBy('name', 'asc')->get(),
-            'filters' => $request->only(['department_id', 'site_id', 'status', 'date_from', 'date_to', 'search']),
+            'filters' => $request->only(['department_id', 'plant_id', 'status', 'date_from', 'date_to', 'search']),
+            'sortField' => $sortField,
+            'sortDirection' => $sortDirection,
         ]);
     }
 
     public function ShowExportPage(Request $request)
     {
-        $filters = $request->only(['department_id', 'site_id', 'status', 'date_from', 'date_to', 'search']);
+        $filters = $request->only(['department_id', 'plant_id', 'status', 'date_from', 'date_to', 'search']);
 
         return view('Ticket.export', [
             'departments' => Department::orderBy('name', 'asc')->get(),
@@ -813,8 +976,127 @@ class TicketController extends Controller
             return redirect()->route('ShowAllSubmissions')->withErrors(['ticket_id' => 'Ticket not found.']);
         }
 
+        // Manual assignment of the level-1 approver is only offered to admins while the ticket
+        // is still waiting at level 1.
+        $level1Approval = Approval::with(['assignees', 'assignedBy'])
+            ->where([['ticket_id', $ticket->id], ['approver_level', 1]])
+            ->first();
+        $canAssign = $this->isAdminUser() && $ticket->status === 'Open' && $ticket->pending_at_level == 1;
+        $assignableUsers = $canAssign ? $this->assignableApprovers() : collect();
+
         return view('Ticket.submission_detail', [
-            'ticket' => $ticket
+            'ticket' => $ticket,
+            'level1Approval' => $level1Approval,
+            'canAssign' => $canAssign,
+            'assignableUsers' => $assignableUsers,
         ]);
+    }
+
+    /**
+     * Admin action: manually assign one or more people to the level-1 approval of a ticket.
+     * Submitting an empty list clears the assignment, which returns the ticket to the normal
+     * behaviour where any routed head can verify it.
+     */
+    public function AssignApprover(Request $request, $ticketId)
+    {
+        if (!$this->isAdminUser()) {
+            abort(403, 'Admin ONLY');
+        }
+
+        $ticket = Ticket::find($ticketId);
+        if (!$ticket) {
+            return redirect()->route('ShowAllSubmissions')->withErrors(['ticket_id' => 'Ticket not found.']);
+        }
+
+        $approval = Approval::where([['ticket_id', $ticket->id], ['approver_level', 1]])->first();
+        if (!$approval || $ticket->status !== 'Open' || $ticket->pending_at_level != 1) {
+            Alert::alert('This ticket is no longer waiting for a level-1 approver.', 'bg-red-200');
+            return redirect()->route('ShowDetail', ['ticketId' => $ticket->id]);
+        }
+
+        $requestedIds = collect($request->input('approver_ids', []))
+            ->filter()
+            ->map(function ($id) {
+                return (int) $id;
+            })
+            ->unique()
+            ->values();
+
+        $assignable = $this->assignableApprovers()->keyBy('id');
+        if ($requestedIds->contains(function ($id) use ($assignable) {
+            return !$assignable->has($id);
+        })) {
+            Alert::alert('One of the selected users cannot be assigned as an approver.', 'bg-red-200');
+            return redirect()->route('ShowDetail', ['ticketId' => $ticket->id]);
+        }
+
+        $previousIds = $approval->assignees()->pluck('users.id');
+        $approval->assignees()->sync($requestedIds->all());
+        $approval->assigned_by_id = $requestedIds->isNotEmpty() ? Auth::id() : null;
+        $approval->assigned_at = $requestedIds->isNotEmpty() ? Carbon::now()->toDateTimeString() : null;
+        $approval->save();
+
+        if ($requestedIds->isEmpty()) {
+            Alert::alert('Assignment cleared. Any routed approver can verify this ticket.', 'bg-green-200');
+            return redirect()->route('ShowDetail', ['ticketId' => $ticket->id]);
+        }
+
+        $names = $requestedIds->map(function ($id) use ($assignable) {
+            return $assignable[$id]->name;
+        })->implode(', ');
+
+        // Email only the people who were just added, using the same "please verify" email the
+        // routed heads receive, so re-saving the list doesn't notify everyone again.
+        $newlyAdded = $requestedIds->diff($previousIds)->map(function ($id) use ($assignable) {
+            return $assignable[$id];
+        });
+        $emails = $newlyAdded->pluck('email')->filter()->unique()->values()->all();
+
+        if (empty($emails)) {
+            Alert::alert('Assigned to ' . $names . '.', 'bg-green-200');
+        } else {
+            try {
+                Mail::to($emails)
+                    ->queue(new PendingApproval($ticket->id, Unsafe::find($ticket->ucua_type)->id ?? null, 1));
+                Alert::alert('Assigned to ' . $names . '. New assignees have been notified by email.', 'bg-green-200');
+            } catch (\Exception $e) {
+                Log::error('Failed to email assigned approvers: ' . $e->getMessage(), ['exception' => $e]);
+                Alert::alert('Assigned to ' . $names . ', but the notification email could not be sent.', 'bg-yellow-200');
+            }
+        }
+
+        return redirect()->route('ShowDetail', ['ticketId' => $ticket->id]);
+    }
+
+    /** Groups whose members act as level-1 approvers, and can therefore be assigned to a ticket. */
+    private const LEVEL1_GROUPS = ['hodiv', 'hodept', 'hosubdept', 'hop', 'hos'];
+
+    private function isAdminUser(): bool
+    {
+        return Auth::user()->groups->pluck('name')->contains(function ($role) {
+            return in_array($role, ['admin', 'she_admin']);
+        });
+    }
+
+    /**
+     * Users an admin may assign as level-1 approver, each with a `role_label` for the dropdown.
+     */
+    private function assignableApprovers()
+    {
+        return User::with('groups')
+            ->where(function ($query) {
+                $query->whereNull('is_enabled')->orWhere('is_enabled', '!=', '0');
+            })
+            ->whereHas('groups', function ($query) {
+                $query->whereIn('name', self::LEVEL1_GROUPS);
+            })
+            ->orderBy('name')
+            ->get()
+            ->each(function ($user) {
+                $user->role_label = $user->groups
+                    ->whereIn('name', self::LEVEL1_GROUPS)
+                    ->pluck('name_display')
+                    ->implode(', ');
+            });
     }
 }

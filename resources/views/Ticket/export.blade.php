@@ -90,12 +90,12 @@
                         </div>
 
                         <div>
-                            <label for="site_id" class="{{ $labelClasses }}">Plant</label>
-                            <select id="site_id" name="site_id" class="{{ $inputClasses }}">
+                            <label for="plant_id" class="{{ $labelClasses }}">Plant</label>
+                            <select id="plant_id" name="plant_id" class="{{ $inputClasses }}">
                                 <option value="">All plants</option>
                                 @foreach ($plants as $plant)
                                     <option value="{{ $plant->id }}"
-                                        {{ (string) ($filters['site_id'] ?? '') === (string) $plant->id ? 'selected' : '' }}>
+                                        {{ (string) ($filters['plant_id'] ?? '') === (string) $plant->id ? 'selected' : '' }}>
                                         {{ $plant->name }}
                                     </option>
                                 @endforeach

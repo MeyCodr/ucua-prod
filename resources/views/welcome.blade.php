@@ -168,12 +168,27 @@
             .hide_display {
                 display: none;
             }
+
+            /* The wide background photo gets cropped to its left edge on a phone, which puts its
+               blue bar behind the headings; use its plain white/orange colours instead. */
+            .welcome-bg {
+                background-image: none !important;
+                background-color: #e85b12;
+            }
+
+            .welcome-bg header {
+                background-color: #fff;
+            }
+
+            .banner {
+                padding: 28px 16px 0;
+            }
         }
     </style>
 </head>
 
 <body class="antialiased">
-    <div
+    <div class="welcome-bg"
         style="background-image: url('{{ asset('/img/ucua_background.jpg') }}'); background-size: cover; background-repeat: no-repeat;">
         <header>
             <!-- Logo -->

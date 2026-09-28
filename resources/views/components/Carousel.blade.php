@@ -1,4 +1,4 @@
-<div class="fotorama" data-nav="thumbs" data-width="100%" data-allowfullscreen="true"
+<div class="fotorama" data-nav="thumbs" data-width="100%" data-maxwidth="320" data-maxheight="180" data-fit="contain" data-allowfullscreen="true"
     data-arrows="true">
     @forelse ($attachments as $item)
         @if ($item->level == 1)

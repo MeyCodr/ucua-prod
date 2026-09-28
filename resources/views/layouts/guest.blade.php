@@ -47,6 +47,25 @@
         .fa-spinner {
             margin-right: 8px;
         }
+
+        /* On a phone the wide background photo is cropped to its left edge (a white band and a
+           stray blue bar), and fixed backgrounds don't work on iOS; use its plain orange instead
+           and float the card with a margin. */
+        @media (max-width: 640px) {
+            main.main {
+                background-image: none !important;
+                background-color: #e85b12;
+                padding: 24px 16px;
+            }
+
+            main.main > .container {
+                padding: 0;
+            }
+
+            .auth-card {
+                border-radius: 12px;
+            }
+        }
     </style>
 </head>
 

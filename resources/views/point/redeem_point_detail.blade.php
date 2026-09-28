@@ -1,25 +1,89 @@
 <x-layouts.guest2-layout>
     <x-slot name="header">
-        <div class="grid md:grid-cols-2">
-            <div class="flex justify-start">
-                <div class="inline-block mr-20">
-                    <a href="{{ route('admin.redeem.list', ['status' => $status]) }}">Back</a>
-                </div>
+        @php
+            $isApproved = $redeem->approver_id != null && $redeem->respond_at != null;
+            $statusStyle = $isApproved
+                ? ['bg' => '#DCFCE7', 'fg' => '#16803D', 'dot' => '#22A557']
+                : ['bg' => '#FEF3C7', 'fg' => '#92400E', 'dot' => '#F59E0B'];
+        @endphp
+        <div class="flex flex-col gap-3">
+            <a href="{{ route('admin.redeem.list', ['status' => $status]) }}"
+                class="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-700 transition duration-150 ease-in-out flex-shrink-0" style="align-self: flex-start;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5" /><path d="M12 19l-7-7 7-7" />
+                </svg>
+                {{ $status }}
+            </a>
+
+            <div class="flex items-center justify-between gap-4">
                 <div>
-                    <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                        ID #{{ $redeem->id }} <span
-                            class="inline-block @if ($status == 'Pending') bg-yellow-200 @else bg-green-200 @endif rounded-full py-1 px-3">{{ $status }}</span>
-                    </h2>
+                    <div class="text-xs font-bold uppercase tracking-wider text-gray-400">Redemption Request</div>
+                    <div class="flex items-center gap-3 mt-0.5">
+                        <h2 class="text-2xl font-bold tracking-tight text-gray-900 leading-tight">
+                            #{{ $redeem->id }}
+                        </h2>
+                        <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold"
+                            style="background: {{ $statusStyle['bg'] }}; color: {{ $statusStyle['fg'] }};">
+                            <span class="w-1.5 h-1.5 rounded-full" style="background: {{ $statusStyle['dot'] }};"></span>
+                            {{ $isApproved ? 'Approved' : 'Pending' }}
+                        </span>
+                    </div>
                 </div>
-            </div>
-            <div class="text-right">
-                <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-3 rounded"
-                    onclick="handleClickActionButton(true, 'Approve')">Approve</button>
+
+                @unless ($isApproved)
+                    <button
+                        class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700 transition duration-150 ease-in-out flex-shrink-0"
+                        onclick="handleClickActionButton(true, 'Approve')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                        Approve
+                    </button>
+                @endunless
             </div>
         </div>
     </x-slot>
 
-    <div class="py-6">
+    {{--
+        The compiled public/css/app.css on this install predates this markup and can't
+        currently be rebuilt (Laravel Mix's toolchain doesn't run on this machine), so a
+        handful of Tailwind utilities below were never generated. These rules backfill
+        exactly those classes with their standard Tailwind values.
+    --}}
+    <style>
+        .tracking-wider { letter-spacing: 0.05em; }
+        .tracking-tight { letter-spacing: -0.025em; }
+        .text-2xl { font-size: 1.5rem; line-height: 2rem; }
+        .rounded-xl { border-radius: 0.75rem; }
+        .w-1\.5 { width: 0.375rem; }
+        .h-1\.5 { height: 0.375rem; }
+        .w-8 { width: 2rem; }
+        .h-8 { height: 2rem; }
+        .w-10 { width: 2.5rem; }
+        .h-10 { height: 2.5rem; }
+        .gap-1\.5 { gap: 0.375rem; }
+        .gap-2 { gap: 0.5rem; }
+        .gap-3 { gap: 0.75rem; }
+        .gap-4 { gap: 1rem; }
+        .gap-5 { gap: 1.25rem; }
+        .mb-5 { margin-bottom: 1.25rem; }
+        .mb-6 { margin-bottom: 1.5rem; }
+        .mt-2 { margin-top: 0.5rem; }
+        .px-2\.5 { padding-left: 0.625rem; padding-right: 0.625rem; }
+        .py-0\.5 { padding-top: 0.125rem; padding-bottom: 0.125rem; }
+        .rounded-full { border-radius: 9999px; }
+        .bg-indigo-50 { background-color: #eef2ff; }
+        .text-indigo-600 { color: #4f46e5; }
+        .text-indigo-700 { color: #4338ca; }
+        .bg-indigo-600 { background-color: #4f46e5; }
+        .hover\:bg-indigo-700:hover { background-color: #4338ca; }
+
+        #redeem-detail .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 28px; box-shadow: 0 1px 2px rgba(20,20,19,0.04); }
+        #redeem-detail .card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; padding-bottom: 16px; border-bottom: 1px solid #f0efe9; }
+        #redeem-detail .card-icon { width: 32px; height: 32px; border-radius: 10px; background: #eef2ff; color: #4f46e5; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        #redeem-detail .card-title { margin: 0; font-size: 13px; font-weight: 700; color: #14171a; text-transform: uppercase; letter-spacing: 0.04em; }
+        #redeem-detail .field-label { font-size: 12px; color: #9a9d8f; font-weight: 600; }
+    </style>
+
+    <div id="redeem-detail" class="py-6">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 md:mb-5">
             {{-- Alert message pop up --}}
             @if (session('alertColor'))
@@ -33,91 +97,98 @@
                 @endcomponent
             @endif
 
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 bg-white border-b border-gray-200">
-                    <div class="flex flex-col gap-y-8">
-                        <div class="grid md:grid-cols-2 gap-x-3">
-                            <div>
-                                <div class="text-gray-600">Staff ID</div>
-                                <div><strong>{{ $redeem->staff_id }}</strong></div>
-                            </div>
-                            <div>
-                                <div class="text-gray-600">Point to Redeem</div>
-                                <div class="text-red">
-                                    <strong>{{ $redeem->points }}</strong>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="grid md:grid-cols-2 gap-x-3">
-                            <div>
-                                <div class="text-gray-600">Requested by</div>
-                                <div><strong>{{ $submitter->name }}</strong></div>
-                                <div><strong>{{ $submitter->email }}</strong></div>
-                                <div>{{ $submitter->phone_number }}</div>
-                            </div>
-                            <div>
-                                <div class="text-gray-600">Requested on</div>
-                                <div>
-                                    {{ \Carbon\Carbon::parse($redeem->created_at)->format('d/m/Y, g:i A') }}
-                                </div>
-                            </div>
-                        </div>
+            @php
+                $initials = function (?string $name) {
+                    $parts = array_filter(preg_split('/\s+/', trim((string) $name)));
+                    $letters = array_map(fn ($p) => mb_substr($p, 0, 1), array_slice($parts, 0, 2));
+                    return mb_strtoupper(implode('', $letters)) ?: '—';
+                };
+            @endphp
+
+            {{-- Quick stats --}}
+            <div class="grid md:grid-cols-3 gap-5 mb-6">
+                <div class="card">
+                    <div class="field-label">Staff ID</div>
+                    <div class="text-sm font-bold text-gray-900 mt-1">{{ $redeem->staff_id }}</div>
+                </div>
+                <div class="card">
+                    <div class="field-label">Points to Redeem</div>
+                    <div class="text-sm font-bold text-gray-900 mt-1">{{ $redeem->points }}</div>
+                </div>
+                <div class="card">
+                    <div class="field-label">Requested On</div>
+                    <div class="text-sm font-bold text-gray-900 mt-1">
+                        {{ \Carbon\Carbon::parse($redeem->created_at)->format('d/m/Y, g:i A') }}
                     </div>
                 </div>
             </div>
 
-            <div class="pb-3 pt-8">
-                <h4 class="text-xl">Approval</h4>
-            </div>
-            <div>
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6 bg-white border-b border-gray-200">
-                        <div class="grid md:grid-cols-1 gap-x-5">
-                            <div class="timeline">
-                                <div class="container right">
-                                    <div class="content">
-                                        <div class="row">
-                                            <div class="col-md-12">
-                                                <div class="status-box">
-                                                    <div class="lbl1">
-                                                        SHE ADMIN PHN
-                                                        @if ($redeem->approver_id != null && $redeem->respond_at != null)
-                                                            <div>
-                                                                By
-                                                                {{ $redeem->approver->name }} ({{ $approver->email }})
-                                                            </div>
-                                                        @endif
-                                                    </div>
-                                                    <hr style="margin:10px 0 10px 0;">
-                                                    <div style="text-align:right;">
-                                                        @if ($redeem->approver_id != null && $redeem->respond_at != null)
-                                                            <div
-                                                                class="inline-block bg-green-200 rounded-full py-1 px-3">
-                                                                Approved
-                                                            </div>
-                                                        @else
-                                                            <div
-                                                                class="inline-block bg-yellow-200 rounded-full py-1 px-3">
-                                                                Pending
-                                                            </div>
-                                                        @endif
-                                                    </div>
-                                                </div>
-                                                <div style="text-align:right;">
-                                                    @if ($redeem->approver_id != null && $redeem->respond_at != null)
-                                                        <div>
-                                                            By
-                                                            {{ $approver->name }} ({{ $approver->email }})
-                                                        </div>
-                                                    @endif
-                                                    <div class="datetime">On
-                                                        {{ \Carbon\Carbon::parse($redeem->respond_at)->format('d/m/Y, g:i A') }}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+            <div class="grid md:grid-cols-2 gap-5 items-start">
+                {{-- Requested By --}}
+                <div class="card">
+                    <div class="card-head">
+                        <div class="card-icon">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a8 8 0 0 1 16 0v1" /></svg>
+                        </div>
+                        <h3 class="card-title">Requested By</h3>
+                    </div>
+
+                    <div class="flex items-center gap-3 mb-5">
+                        <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold flex-shrink-0">
+                            {{ $initials($submitter->name) }}
+                        </span>
+                        <div>
+                            <div class="text-xs font-bold text-gray-900">{{ $submitter->name }}</div>
+                            <div class="text-xs text-gray-500 mt-0.5">{{ $submitter->email }}</div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between gap-3">
+                        <span class="field-label">Phone</span>
+                        <span class="text-xs font-semibold text-gray-800">{{ $submitter->phone_number }}</span>
+                    </div>
+                    <div class="flex justify-between gap-3 mt-4">
+                        <span class="field-label">Staff ID</span>
+                        <span class="text-xs font-semibold text-gray-800">{{ $submitter->staff_id }}</span>
+                    </div>
+                </div>
+
+                {{-- Review Timeline --}}
+                <div class="card">
+                    <div class="card-head">
+                        <div class="card-icon">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></svg>
+                        </div>
+                        <h3 class="card-title">Review Timeline</h3>
+                    </div>
+
+                    <div class="flex gap-4">
+                        <div class="flex items-center justify-center rounded-full flex-shrink-0"
+                            style="width: 30px; height: 30px; background: {{ $statusStyle['bg'] }}; color: {{ $statusStyle['fg'] }}; {{ $isApproved ? '' : 'border: 2px solid ' . $statusStyle['fg'] . ';' }}">
+                            @if ($isApproved)
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                            @else
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1" /></svg>
+                            @endif
+                        </div>
+                        <div>
+                            <div class="field-label" style="text-transform: uppercase; letter-spacing: 0.05em;">SHE Admin PHN</div>
+
+                            <div class="text-xs font-semibold text-gray-800 mt-1">
+                                @if ($isApproved)
+                                    {{ $redeem->approver?->name }} <span class="text-gray-400 font-normal">&middot; {{ $redeem->approver?->email }}</span>
+                                @else
+                                    <span class="text-gray-500 font-normal">Awaiting review</span>
+                                @endif
+                            </div>
+
+                            <div class="flex items-center gap-2 mt-2">
+                                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold" style="background: {{ $statusStyle['bg'] }}; color: {{ $statusStyle['fg'] }};">
+                                    {{ $isApproved ? 'Approved' : 'Pending' }}
+                                </span>
+                                @if ($isApproved)
+                                    <span class="text-xs text-gray-500">On {{ \Carbon\Carbon::parse($redeem->respond_at)->format('d/m/Y, g:i A') }}</span>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -125,6 +196,7 @@
             </div>
         </div>
     </div>
+
     @component('point.Confirm', [
         'status' => $status,
         'redeem' => $redeem,
@@ -132,133 +204,4 @@
         'submitter' => $submitter,
     ])
     @endcomponent
-    <style>
-        .timeline {
-            position: relative;
-            max-width: 1200px;
-            margin: 0;
-        }
-
-        /* The actual timeline (the vertical ruler) */
-        .timeline::after {
-            content: '';
-            position: absolute;
-            width: 6px;
-            background-color: darkgrey;
-            top: 0;
-            bottom: 0;
-            left: 2.2%;
-            margin-left: -3px;
-        }
-
-        /* Container around content */
-        .container {
-            padding: 10px 40px;
-            position: relative;
-            background-color: inherit;
-            /* background-color: #FBFCFC; */
-            /* background-color: green; */
-            /* width: 50%; */
-        }
-
-        /* The circles on the timeline */
-        .container::after {
-            content: '';
-            position: absolute;
-            width: 25px;
-            height: 25px;
-            right: -11px;
-            background-color: white;
-            border: 4px solid #053b73;
-            top: 15px;
-            border-radius: 50%;
-            z-index: 1;
-        }
-
-        /* Place the container to the left */
-        .left {
-            left: 0;
-        }
-
-        /* Place the container to the right */
-        .right {
-            left: 20px;
-        }
-
-        /* Add arrows to the left container (pointing right) */
-        .left::before {
-            content: " ";
-            height: 0;
-            position: absolute;
-            top: 22px;
-            width: 0;
-            z-index: 1;
-            right: 30px;
-            border: medium solid white;
-            border-width: 10px 0 10px 10px;
-            border-color: transparent transparent transparent white;
-        }
-
-        /* Add arrows to the right container (pointing left) */
-        .right::before {
-            content: " ";
-            height: 0;
-            position: absolute;
-            top: 22px;
-            width: 0;
-            z-index: 1;
-            left: 30px;
-            border: medium solid white;
-            border-width: 10px 10px 10px 0;
-            border-color: transparent white transparent transparent;
-        }
-
-        /* Fix the circle for containers on the right side */
-        .right::after {
-            left: -7px;
-        }
-
-        /* The actual content */
-        .content {
-            padding: 10px 15px;
-            background-color: #f7f7f7;
-            position: relative;
-            border-radius: 6px;
-        }
-
-        /* Media queries - Responsive timeline on screens less than 600px wide */
-        @media screen and (max-width: 600px) {
-
-            /* Place the timelime to the left */
-            .timeline::after {
-                left: 31px;
-            }
-
-            /* Full-width containers */
-            .container {
-                width: 100%;
-                padding-left: 70px;
-                padding-right: 25px;
-            }
-
-            /* Make sure that all arrows are pointing leftwards */
-            .container::before {
-                left: 60px;
-                border: medium solid white;
-                border-width: 10px 10px 10px 0;
-                border-color: transparent white transparent transparent;
-            }
-
-            /* Make sure all circles are at the same spot */
-            .left::after,
-            .right::after {
-                left: 15px;
-            }
-
-            /* Make all right containers behave like the left ones */
-            .right {
-                left: 0%;
-            }
-        }
-    </style>
 </x-layouts.guest2-layout>

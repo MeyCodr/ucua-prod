@@ -12,7 +12,7 @@ Details of the observation are as follow.<br>
 <div>{{ $ticket->email }}</div>
 <div>{{ $ticket->phone_number }}</div>
 <div>{{ $ticket->staff_id }}</div>
-<div>{{ $ticket->plant->name }}</div>
+<div>Plant Involved: {{ $ticket->plant_involve?->name ?? '—' }}</div>
 @if ($ticket->department_id != 0)
 <div>{{ $ticket->department->name }}</div>
 @if ($ticket->sub_department_id != 0)

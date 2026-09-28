@@ -33,6 +33,28 @@ class Approval extends Model
     }
 
     /**
+     * The people an admin manually assigned to this approval step. When there are any, only
+     * they (or an admin) can respond to it.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
+    public function assignees()
+    {
+        return $this->belongsToMany(User::class, 'approval_assignees', 'approval_id', 'user_id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get the admin who made the manual assignment
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function assignedBy()
+    {
+        return $this->belongsTo(User::class, 'assigned_by_id');
+    }
+
+    /**
      * Get the group that owns the Approval
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo

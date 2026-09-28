@@ -29,22 +29,18 @@ class SubmitNewTicket extends FormRequest
             'phone_number' => ['required', 'string', 'max:20', 'regex:/^[0-9-+#*]+$/m'],
             // 'staff_id' => ['required', 'string', 'max:20', 'regex:/^[0-9-+#*]+$/m'],
             'staff_id' => ['required', 'string', 'max:20', 'regex:/^[A-Za-z0-9]+$/'],
-            'site_id' => 'required',
             'department_id' => 'required',
             'other_department' => ['nullable', 'string', 'regex:/^[a-zA-Z0-9-&.,\(\)\/\s]+$/m', 'max:200'],
             'affected_area' => ['required', 'string', 'regex:/^[a-zA-Z0-9-&.,\(\)\/\s]+$/m', 'max:500'],
             'dept_res_id' => 'required',
             'dept_res_other' => ['nullable', 'string', 'regex:/^[a-zA-Z0-9-&.,\(\)\/\s]+$/m', 'max:200'],
             'plant_inv_id' => 'required',
-            'gm_res_id' => 'required',
             'entry_unsafe_condition_act' => 'required',
             'entry_unsafe' => ['nullable'],
             'unsafe_cond_other' => ['nullable', 'string', 'regex:/^[a-zA-Z0-9-&.,\(\)\/\s]+$/m', 'max:50'],
             'unsafe_act_other' => ['nullable', 'string', 'regex:/^[a-zA-Z0-9-&.,\(\)\/\s]+$/m', 'max:50'],
             'description' => 'required|max:500',
             'stop_cult_id' => 'required',
-            'zero_harm_id' => 'required',
-            'rank_id' => 'required',
             'attachment_before' => 'required|array|max:5',
             'attachment_before.*' => 'image|max:50000',
             'attachment_correction' => 'nullable|array|max:5',
@@ -53,6 +49,17 @@ class SubmitNewTicket extends FormRequest
             'bbs_action' => 'required',
             'bbs_methodology' => ['required_if:bbs_action,1', 'nullable', 'array'],
             'bbs_methodology.*' => ['in:Capture,Care,Connect,Correct,Conversation,Conclude'],
+        ];
+    }
+
+    public function messages()
+    {
+        // HEIC/HEIF (iPhone / some Android cameras) only gets here when the browser couldn't convert it.
+        $format = 'Only JPEG, PNG or GIF pictures are supported. If your phone saves photos as HEIC, set the camera format to "Most Compatible" (iPhone) or JPEG and try again.';
+
+        return [
+            'attachment_before.*.image' => $format,
+            'attachment_correction.*.image' => $format,
         ];
     }
 }

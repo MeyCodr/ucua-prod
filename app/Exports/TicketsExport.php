@@ -65,7 +65,7 @@ class TicketsExport implements FromCollection, WithHeadings, WithMapping, WithCo
             $ticket->phone_number,
             $ticket->staff_id,
             $ticket->department?->name ?? $ticket->department_other ?? 'N/A',
-            $ticket->plant?->name ?? 'N/A',
+            $ticket->plant_involve?->name ?? 'N/A',
             $ticket->status,
             optional($ticket->created_at)->format('d/m/Y H:i'),
         ];

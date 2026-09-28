@@ -1,10 +1,19 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="grid md:grid-cols-2">
+        <div class="flex items-center gap-4">
+            <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="14" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" />
+                </svg>
+            </div>
             <div>
-                <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                <h2 class="text-2xl font-bold tracking-tight text-gray-900 leading-tight">
                     All Tickets
                 </h2>
+                <p class="mt-1 text-sm text-gray-500">
+                    Browse and filter every ticket submitted across the organization.
+                </p>
             </div>
         </div>
     </x-slot>
@@ -15,6 +24,24 @@
                 $activeFilterCount = collect($filters)->filter(fn($value) => filled($value))->count();
                 $inputClasses = 'block w-full rounded-md border-gray-300 shadow-sm text-sm text-gray-700 focus:border-gray-500 focus:ring-gray-500';
                 $labelClasses = 'block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5';
+                $activeFilters = collect($filters)->filter(fn ($value) => filled($value))->all();
+                $sortLink = fn (string $field) => route('ShowAllSubmissions', array_merge($activeFilters, [
+                    'sort' => $field,
+                    'direction' => $sortField === $field && $sortDirection === 'asc' ? 'desc' : 'asc',
+                ]));
+                $columns = [
+                    'id' => 'Observation',
+                    'ticket_id' => 'Ticket ID',
+                    'name' => 'Reported By',
+                    'department' => 'Department',
+                    'plant' => 'Plant',
+                    'status' => 'Status',
+                ];
+                $initials = function (?string $name) {
+                    $parts = array_filter(preg_split('/\s+/', trim((string) $name)));
+                    $letters = array_map(fn ($p) => mb_substr($p, 0, 1), array_slice($parts, 0, 2));
+                    return mb_strtoupper(implode('', $letters)) ?: '—';
+                };
             @endphp
 
             {{--
@@ -38,10 +65,44 @@
                 .h-3\.5 { height: 0.875rem; }
                 .w-3\.5 { width: 0.875rem; }
                 .tracking-wide { letter-spacing: 0.025em; }
+                .tracking-tight { letter-spacing: -0.025em; }
+                .text-2xl { font-size: 1.5rem; line-height: 2rem; }
                 @media (min-width: 768px) {
                     .md\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
                     .md\:col-span-2 { grid-column: span 2 / span 2; }
                 }
+
+                .overflow-x-auto { overflow-x: auto; }
+                .min-w-full { min-width: 100%; }
+                .table-auto { table-layout: auto; }
+                .border-collapse { border-collapse: separate; border-spacing: 0; }
+                .whitespace-nowrap { white-space: nowrap; }
+                .tracking-wider { letter-spacing: 0.05em; }
+                .select-none { user-select: none; }
+                .rounded-xl { border-radius: 0.75rem; }
+                .w-8 { width: 2rem; }
+                .h-8 { height: 2rem; }
+                .w-9 { width: 2.25rem; }
+                .px-2\.5 { padding-left: 0.625rem; padding-right: 0.625rem; }
+                .py-0\.5 { padding-top: 0.125rem; padding-bottom: 0.125rem; }
+                .text-green-700 { color: #15803d; }
+                .text-red-700 { color: #b91c1c; }
+                .bg-blue-100 { background-color: #dbeafe; }
+                .text-blue-700 { color: #1d4ed8; }
+                .text-gray-300 { color: #d1d5db; }
+                .divide-y > :not([hidden]) ~ :not([hidden]) { border-top-width: 1px; }
+                .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: #f1f3f5; }
+                .bg-indigo-600 { background-color: #4f46e5; }
+                .hover\:bg-indigo-700:hover { background-color: #4338ca; }
+                .hover\:text-gray-700:hover { color: #374151; }
+
+                #submissions-table thead th { border-bottom: 1px solid #e5e7eb; }
+                #submissions-table tbody tr:nth-child(even) { background-color: #fafafa; }
+                #submissions-table tbody tr:hover { background-color: #f3f4f6; }
+                #submissions-table .sort-link { color: #6b7280; text-decoration: none; }
+                #submissions-table .sort-link:hover { color: #1f2937; }
+                #submissions-table .sort-icon { opacity: 0.45; }
+                #submissions-table .sort-icon.active { opacity: 1; }
             </style>
 
             <div class="bg-white rounded-lg shadow-sm border border-gray-100 mb-6 ">
@@ -90,12 +151,12 @@
                         </div>
 
                         <div>
-                            <label for="site_id" class="{{ $labelClasses }}">Plant</label>
-                            <select id="site_id" name="site_id" class="{{ $inputClasses }}">
+                            <label for="plant_id" class="{{ $labelClasses }}">Plant</label>
+                            <select id="plant_id" name="plant_id" class="{{ $inputClasses }}">
                                 <option value="">All plants</option>
                                 @foreach ($plants as $plant)
                                     <option value="{{ $plant->id }}"
-                                        {{ (string) ($filters['site_id'] ?? '') === (string) $plant->id ? 'selected' : '' }}>
+                                        {{ (string) ($filters['plant_id'] ?? '') === (string) $plant->id ? 'selected' : '' }}>
                                         {{ $plant->name }}
                                     </option>
                                 @endforeach
@@ -144,50 +205,77 @@
                 </form>
             </div>
 
-            <div class="flex flex-col gap-y-1.5">
-                @forelse ($tickets as $item)
-                    <a href="{{ route('ShowDetail', ['ticketId' => $item->id]) }}">
-                        <div class="grid md:grid-cols-4 bg-white rounded p-4 shadow hover:shadow-md hover:bg-gray-200">
-                            <div>
-                                <strong>Observation</strong>
-                                <div class="text-lg">#{{ $item->id }}</div>
-                                <strong>Ticket ID</strong>
-                                <div class="text-lg">#{{ $item->ticket_id }}</div>
-                            </div>
-                            <div>
-                                <div><strong>Reported by</strong></div>
-                                <div>{{ $item->name }}</div>
-                                <div>{{ $item->email }}</div>
-                                <div>{{ $item->phone_number }}</div>
-                            </div>
-                            <div>
-                                <div><strong>Department</strong></div>
-                                <div>{{ $item->department?->name ?? $item->department_other ?? 'No item' }}</div>
-                                <div><strong>Plant</strong></div>
-                                <div>{{ $item->plant?->name ?? 'No item' }}</div>
-                            </div>
-                            <div class="text-right">
-                                @if ($item->status == 'Closed')
-                                    <div class="inline-block bg-green-200 rounded-full py-1 px-3">
-                                        {{ $item->status }}</div>
-                                    <div style="text-align:right;">
-                                        <div class="datetime">On
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
+                <table id="submissions-table" class="min-w-full table-auto border-collapse text-xs">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            @foreach ($columns as $field => $label)
+                                <th class="text-left text-xs font-medium text-gray-500 uppercase tracking-wider px-4 py-4 select-none">
+                                    <a href="{{ $sortLink($field) }}" class="sort-link inline-flex items-center gap-1">
+                                        {{ $label }}
+                                        <svg class="sort-icon @if ($sortField === $field) active @endif" width="10" height="10" viewBox="0 0 24 24" fill="none"
+                                            stroke="{{ $sortField === $field ? '#4f46e5' : '#98a2b3' }}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                            @if ($sortField === $field && $sortDirection === 'asc')
+                                                <path d="M18 15l-6-6-6 6" />
+                                            @elseif ($sortField === $field && $sortDirection === 'desc')
+                                                <path d="M6 9l6 6 6-6" />
+                                            @else
+                                                <path d="M8 9l4-4 4 4" /><path d="M16 15l-4 4-4-4" />
+                                            @endif
+                                        </svg>
+                                    </a>
+                                </th>
+                            @endforeach
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @forelse ($tickets as $item)
+                            <tr class="cursor-pointer"
+                                onclick="window.location='{{ route('ShowDetail', ['ticketId' => $item->id]) }}'">
+                                <td class="px-4 py-4 whitespace-nowrap text-gray-700">#{{ $item->id }}</td>
+                                <td class="px-4 py-4 whitespace-nowrap text-gray-700">#{{ $item->ticket_id }}</td>
+                                <td class="px-4 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold flex-shrink-0">
+                                            {{ $initials($item->name) }}
+                                        </span>
+                                        <span class="text-gray-800 font-medium">{{ $item->name }}</span>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-4 text-gray-700">{{ $item->department?->name ?? $item->department_other ?? '—' }}</td>
+                                <td class="px-4 py-4 text-gray-700">{{ $item->plant_involve?->name ?? '—' }}</td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    @if ($item->status === 'Closed')
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">Closed</span>
+                                        <div class="mt-1 text-xs text-gray-400">
                                             {{ optional($item->approval->where('approver_level', 2)->first())->respond_at ? \Carbon\Carbon::parse($item->approval->where('approver_level', 2)->first()->respond_at)->format('d/m/Y, g:i A') : 'N/A' }}
                                         </div>
-                                    </div>
-                                @else
-                                    <div class="inline-block bg-yellow-200 rounded-full py-1 px-3">
-                                        {{ $item->status }}</div>
-                                @endif
-                            </div>
+                                    @elseif ($item->status === 'Declined')
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">Declined</span>
+                                    @else
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">{{ $item->status }}</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td class="px-4 py-3 text-gray-500" colspan="6">No items</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+
+                @if ($tickets->total() > 0)
+                    <div class="flex items-center justify-between px-4 py-3 border-t border-gray-200">
+                        <p class="text-sm text-gray-500">
+                            Showing <span class="font-semibold text-gray-700">{{ $tickets->firstItem() }}–{{ $tickets->lastItem() }}</span>
+                            of <span class="font-semibold text-gray-700">{{ $tickets->total() }}</span> tickets
+                        </p>
+                        <div>
+                            {{ $tickets->links('pagination.ucua-pills') }}
                         </div>
-                    </a>
-                @empty
-                    <div>No items</div>
-                @endforelse
-            </div>
-            <div>
-                {{ $tickets->links() }}
+                    </div>
+                @endif
             </div>
         </div>
     </div>

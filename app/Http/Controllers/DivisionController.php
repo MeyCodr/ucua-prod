@@ -15,18 +15,37 @@ class DivisionController extends Controller
      */
     public function index(Request $request)
     {
-        $division = Division::with('head_div')->orderBy('id', 'asc');
+        $sortable = [
+            'id' => 'divisions.id',
+            'name' => 'divisions.name',
+            'head_div' => 'users.name',
+            'created_at' => 'divisions.created_at',
+        ];
 
-        if ($request->filled('name')) {
-            $division->where('name', 'LIKE', "%{$request->name}%");
+        $sortField = $request->input('sort', 'id');
+        $sortField = array_key_exists($sortField, $sortable) ? $sortField : 'id';
+        $sortDirection = $request->input('direction') === 'desc' ? 'desc' : 'asc';
+
+        $division = Division::with('head_div');
+
+        if ($sortField === 'head_div') {
+            $division->select('divisions.*')
+                ->leftJoin('users', 'users.id', '=', 'divisions.user_head_id');
         }
 
-        $divisions = $division->paginate(10);
+        if ($request->filled('name')) {
+            $division->where('divisions.name', 'LIKE', "%{$request->name}%");
+        }
+
+        $divisions = $division->orderBy($sortable[$sortField], $sortDirection)
+            ->paginate(20);
 
         return view('division.list', [
             'divisions' => $divisions,
             'pageTitle' => 'Divisions',
-            'pageNum' => $divisions->currentPage()
+            'pageNum' => $divisions->currentPage(),
+            'sortField' => $sortField,
+            'sortDirection' => $sortDirection,
         ]);
     }
 

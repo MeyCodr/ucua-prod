@@ -26,7 +26,7 @@ class FormUser extends FormRequest
         return [
             'name' => ['required', 'string', 'regex:/^[a-zA-Z-&.,\/\s]+$/m', 'max:50'],
             'email' => ['sometimes', 'required', 'string', 'unique:App\Models\User,email', 'email:rfc'],
-            'phone_number' => ['required', 'string', 'max:20', 'regex:/^[0-9-+#*]+$/m'],
+            'phone_number' => ['nullable', 'string', 'max:20', 'regex:/^[0-9-+#*]+$/m'],
             'department_id' => ['required', 'exists:departments,id'],
             'designation' => ['required', 'string', 'regex:/^[a-zA-Z0-9-&.,\/\s]+$/m', 'max:50'],
             'role_id' => ['required'],

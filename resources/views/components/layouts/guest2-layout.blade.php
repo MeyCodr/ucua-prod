@@ -44,6 +44,13 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap">
     <link rel="stylesheet" href="{{ asset('/css/app.css') }}">
     <link rel="stylesheet" href="{{ asset('/css/bootstrap-icons.min.css') }}">
+
+    <style>
+        /* Page bodies only pad from `sm:` up, which leaves cards touching the screen edge on phones. */
+        @media (max-width: 640px) {
+            main .max-w-7xl.mx-auto { padding-left: 16px; padding-right: 16px; }
+        }
+    </style>
 </head>
 
 <body class="font-sans antialiased">
@@ -55,10 +62,8 @@
                     <div class="flex">
                         <!-- Logo -->
                         <div class="flex-shrink-0 flex items-center">
-                            <div class="flex justify-between w-full px-8 m-4">
-                                <img src="{{ asset('/img/phn-logo.png') }}" alt="PHN Logo"
-                                    style="width: auto;height: 50%;">
-                            </div>
+                            <img src="{{ asset('/img/phn-logo.png') }}" alt="PHN Logo"
+                                style="height: 28px; width: auto; display: block;">
                         </div>
                     </div>
 
@@ -67,6 +72,14 @@
                         <x-nav-link :href="route('ShowSearchTicketForm')" :active="request()->routeIs('dashboard')">
                             Back to Enter Staff ID
                         </x-nav-link>
+                    </div>
+
+                    {{-- Phones: the link above is hidden, so give them a compact version. --}}
+                    <div class="flex items-center sm:hidden">
+                        <a href="{{ route('ShowSearchTicketForm') }}"
+                            style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; font-weight: 600; color: #374151; text-decoration: none;">
+                            <i class="bi bi-person-badge"></i> Change Staff ID
+                        </a>
                     </div>
                 </div>
             </div>
