@@ -34,4 +34,10 @@ return [
         'sitekey' => env('RECAPTCHA_SITE_KEY'),
     ],
 
+    // Shared secret for the external crontab that triggers scheduled jobs over HTTP
+    // (the app is hosted on cPanel; the crontab lives on a separate Linux server).
+    'cron' => [
+        'key' => env('CRON_KEY'),
+    ],
+
 ];

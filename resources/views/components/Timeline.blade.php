@@ -4,12 +4,11 @@
 
     // The level-1 approval's group_id is a static default (always "hodept"), not the
     // specific people this ticket was actually routed to. Resolve the real PICs for
-    // this ticket instead of listing every member of that group.
+    // this ticket instead of listing every member of that group. Head of department (and
+    // sub-department head) only - keep in sync with the new-ticket email in TicketController.
     $level1Pics = collect([
         optional($ticket->dep_responsible)->head_department,
         optional($ticket->sub_dep_responsible)->head_subdepartment,
-        optional($ticket->plant_involve)->head_plant,
-        optional(optional($ticket->dep_responsible)->division)->head_div,
     ])->filter()->unique('id')->values();
 
     $reviewSteps = collect();

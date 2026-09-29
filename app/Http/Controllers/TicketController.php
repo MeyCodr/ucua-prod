@@ -218,21 +218,19 @@ class TicketController extends Controller
         $approval2->respond_at = null;
         $approval2->save();
 
-        // Get PICs
+        // Get PICs: the head of the responsible department, plus the sub-department head when the
+        // ticket is routed to a sub-department. The head of division (GM) and the plant head are no
+        // longer notified - keep this in sync with $level1Pics in components/Timeline.blade.php.
         $dep_res = Department::find($ticket->dept_res_id);
         $head_dep = $dep_res ? User::find($dep_res->user_head_id) : null;
         $sub_dep = SubDepartment::find($ticket->sub_dept_res_id);
         $head_sub_dep = $sub_dep ? User::find($sub_dep->user_head_id) : null;
-        $plant_inv = Plant::find($ticket->plant_inv_id);
-        $head_plant = $plant_inv ? User::find($plant_inv->user_head_id) : null;
-        $hod = $dep_res->division->head_div ?? null;
 
-        $users = collect($head_dep ? $head_dep->email : null)
-            ->merge(collect($head_sub_dep ? $head_sub_dep->email : null))
-            ->merge(collect($head_plant ? $head_plant->email : null))
-            ->merge(collect($hod ? $hod->email : null));
-
-        // dd($head_dep, $head_sub_dep, $head_plant, $hod, $users);
+        $users = collect([$head_dep->email ?? null, $head_sub_dep->email ?? null])
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
 
         $unsafeEntry = Unsafe::find($ticket->ucua_type);
 

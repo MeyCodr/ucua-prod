@@ -9,6 +9,7 @@ use App\Http\Controllers\DivisionController;
 use App\Http\Controllers\PlantController;
 use App\Http\Controllers\PointRedeemController;
 use App\Http\Controllers\SubDepartmentController;
+use App\Http\Controllers\CronController;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,6 +23,10 @@ use App\Http\Controllers\SubDepartmentController;
 */
 
 Route::get('/', [Controller::class, 'ShowWelcome']);
+
+// Called by the external crontab (see CronController); requires CRON_KEY.
+Route::get('cron/overdue-reminders', [CronController::class, 'overdueReminders'])
+    ->middleware('throttle:5,1');
 
 Route::get('/dashboard', [Controller::class, 'ShowDashboard'])->middleware(['auth'])->name('dashboard');
 
