@@ -121,14 +121,10 @@
         }
     </style>
 
-    <script src="https://www.google.com/recaptcha/api.js"></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <script src="{{ asset('js/image-compress.js') }}"></script>
 
     <script>
-        function onSubmit(token) {
-            document.getElementById("newTicketForm").submit();
-        }
-
         // Step nav: highlight the section currently in view; click a step to scroll to it.
         document.addEventListener('DOMContentLoaded', function () {
             var navItems = document.querySelectorAll('[data-step-nav]');
@@ -910,6 +906,13 @@
 
                         {{-- Submit --}}
                         <div style="text-align: center; padding-top: 24px;">
+                            {{-- Cloudflare Turnstile: adds a hidden cf-turnstile-response field to the form --}}
+                            <div class="cf-turnstile" data-sitekey="{{ config('services.turnstile.sitekey') }}"
+                                style="display: flex; justify-content: center; margin-bottom: 16px;"></div>
+                            @error('cf-turnstile-response')
+                                <div class="alert alert-danger">{{ $message }}</div>
+                            @enderror
+
                             <button type="submit" class="ucua-btn-primary">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
                                 Submit my observation now!

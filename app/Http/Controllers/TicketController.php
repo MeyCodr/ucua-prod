@@ -67,8 +67,13 @@ class TicketController extends Controller
             // Generate ticket_id
             $year = now()->format('Y');
             $month = now()->format('m');
-            $yearlyCount = Ticket::whereYear('created_at', $year)->lockForUpdate()->count();
-            $increment = str_pad($yearlyCount + 1, 5, '0', STR_PAD_LEFT);
+            // Continue from the highest number used this year (ticket_id = YYYYMM + 5-digit yearly sequence).
+            // A row count would reuse an existing number once any ticket has been deleted.
+            $lastSequence = (int) Ticket::withTrashed()
+                ->where('ticket_id', 'like', $year . '%')
+                ->lockForUpdate()
+                ->max(DB::raw('CAST(SUBSTRING(ticket_id, 7) AS UNSIGNED)'));
+            $increment = str_pad($lastSequence + 1, 5, '0', STR_PAD_LEFT);
             $ticket_id = $year . $month . $increment;
 
             // Create new ticket

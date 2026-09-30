@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\Turnstile;
 use Illuminate\Foundation\Http\FormRequest;
 
 class SubmitNewTicket extends FormRequest
@@ -49,6 +50,7 @@ class SubmitNewTicket extends FormRequest
             'bbs_action' => 'required',
             'bbs_methodology' => ['required_if:bbs_action,1', 'nullable', 'array'],
             'bbs_methodology.*' => ['in:Capture,Care,Connect,Correct,Conversation,Conclude'],
+            'cf-turnstile-response' => ['bail', 'required', new Turnstile],
         ];
     }
 
@@ -60,6 +62,7 @@ class SubmitNewTicket extends FormRequest
         return [
             'attachment_before.*.image' => $format,
             'attachment_correction.*.image' => $format,
+            'cf-turnstile-response.required' => 'Please complete the security check before submitting. / Sila lengkapkan pengesahan keselamatan sebelum menghantar.',
         ];
     }
 }

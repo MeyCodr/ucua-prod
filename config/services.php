@@ -34,6 +34,12 @@ return [
         'sitekey' => env('RECAPTCHA_SITE_KEY'),
     ],
 
+    // Cloudflare Turnstile (CAPTCHA) on the New Ticket form.
+    'turnstile' => [
+        'sitekey' => env('TURNSTILE_SITE_KEY'),
+        'secret' => env('TURNSTILE_SECRET_KEY'),
+    ],
+
     // Shared secret for the external crontab that triggers scheduled jobs over HTTP
     // (the app is hosted on cPanel; the crontab lives on a separate Linux server).
     'cron' => [
